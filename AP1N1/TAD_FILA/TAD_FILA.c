@@ -48,7 +48,7 @@ int dequeue(Fila* f, int* removido) {
     return 1; 
 }
 
-// Imprime fila
+
 void imprime_fila(Fila* f) {
     No* atual = f->inicio;
     printf("Fila: ");
