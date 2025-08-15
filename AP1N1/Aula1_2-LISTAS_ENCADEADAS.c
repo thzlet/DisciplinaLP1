@@ -14,3 +14,4 @@ int main(){
     lst_libera(produtos);
     
     return 0;
+}
