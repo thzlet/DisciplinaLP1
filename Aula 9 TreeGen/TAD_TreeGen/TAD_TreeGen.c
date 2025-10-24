@@ -1,215 +1,284 @@
 #include "TAD_TreeGen.h"
-
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
-/*IS IT EMPTY?
-    respondes this question: is this tree empty?
+int tree_empty(Node* root) {
+    return (root == NULL); // se estiver vazia, retorna 1
+}
 
-Params
-    root: pointer to a root node of a tree.
+Node* tree_create_empty() {
+    return NULL; // arvore vazia = ponteiro nulo 
+}
 
-Return
-    True if the tree is empty, otherwise false.
+Node* tree_create_node(void* info, Node* lst, Node* rst) {
+    Node* new_node = (Node*)malloc(sizeof(Node)); // aloca memória pro nó
+    if (!new_node) { // verifica se foi alocado
+        printf("Error!\n");
+        return NULL;
+    }
+    new_node->info = info; // ponteiro genérico para os dados do nó
+    new_node->left = lst; // filho a esquerda
+    new_node->right = rst; /// filho a direita
+    return new_node;
+}
+
+Node* tree_insert_node(Node* root, Node* new_node, int (compare)(void*, void*)) {
+    if (root == NULL) // se a arvore estiver vazia, o nó vira raiz
+        return new_node;
+
+    if (compare(new_node->info, root->info) < 0) // verificando se vai para a esquerda ou direita
+        root->left = tree_insert_node(root->left, new_node, compare);
+    else
+        root->right = tree_insert_node(root->right, new_node, compare);
+
+    return root;
+}
+
+void tree_free(Node* root) { // liberando recursivamente os nós
+    if (root != NULL) {
+        tree_free(root->left);
+        tree_free(root->right);
+        free(root->info); 
+        free(root);
+    }
+}
+/* 
+// o que??
+void tree_map(Node* root, void (operation)(void*)) {
+    if (root != NULL) {
+        tree_map(root->left, operation);
+        operation(root->info);
+        tree_map(root->right, operation);
+    }
+}
 */
-int tree_empty(Node* root);
+Node* tree_copy_node(Node* original) {
+    if (original == NULL) return NULL; // nó original 
+    Node* copy = (Node*)malloc(sizeof(Node)); // aloca memória pro novo node
+    if (copy == NULL) return NULL; // verifica a alocação
+    copy->info = original->info; // shallow copy
+    copy->left = NULL; // inicializa os filhos como null
+    copy->right = NULL;
+    return copy;
+}
 
-/* CREATE AN ENPTY TREE
-    Creates a empty tree.
+Listagen* tree_filter_as_list(Node* root, int (condition)(void*), void* (copy_info)(void*)) {
+    if (root == NULL) return NULL; // nada para filtrar
 
-Return
-    (Node*)NULL, representing a empty tree.
+    Listagen* lista = NULL; // inicializa a lista generica
+
+    if (condition(root->info)) { // verifica se o nó atual atende a condição
+        Listagen* novo = (Listagen*)malloc(sizeof(Listagen)); // aloca elemento na lista
+        novo->info = copy_info(root->info); // copia os dados
+        novo->prox = lista; // insere na lista
+        lista = novo;
+    }
+    // filtra recursivamente as subarvores
+    Listagen* left = tree_filter_as_list(root->left, condition, copy_info);
+    Listagen* right = tree_filter_as_list(root->right, condition, copy_info);
+
+    // percorre a lista a esquerda e add elementos do nó no final 
+    Listagen* p = left;
+    while (p && p->prox != NULL) p = p->prox;
+    if (p) p->prox = lista;
+    else left = lista;
+
+    // percorre a lista resultante e add os elementos na sub a direita
+    p = left;
+    while (p && p->prox != NULL) p = p->prox;
+    if (p) p->prox = right;
+    else left = right;
+
+    // lista encadeada não necessariamente ordenada
+    return left;
+}
+
+Node* tree_filter(Node* root, int (condition)(void*), void* (copy_info)(void*), int (compare)(void*, void*)) {
+    if (root == NULL) return NULL;
+    Node* new_root = NULL;
+
+    if (condition(root->info)) {
+        void* copy = copy_info(root->info);
+        Node* new_node = tree_create_node(copy, NULL, NULL); // novo nó como cópia
+        new_root = tree_insert_node(new_root, new_node, compare);
+    }
+
+    Node* left = tree_filter(root->left, condition, copy_info, compare);
+    Node* right = tree_filter(root->right, condition, copy_info, compare);
+
+    if (left) new_root = tree_insert_node(new_root, left, compare);
+    if (right) new_root = tree_insert_node(new_root, right, compare);
+
+    // o resultado eh uma arvore
+    return new_root;
+}
+
+int tree_get_height(Node* node) { // altura de uma arvore a partir de um nó
+    if (node == NULL) return 0; // altura 0
+    int left_h = tree_get_height(node->left); 
+    int right_h = tree_get_height(node->right);
+    return (left_h > right_h ? left_h : right_h) + 1; // +1 conta o nó atual
+}
+
+Node* rotate_right(Node* root) {
+    if (root == NULL || root->left == NULL) // impossivel rotacionar
+        return root;
+
+    Node* new_root = root->left; // novo topo 
+    root->left = new_root->right; // filho esquerdo do nó atual
+    new_root->right = root; // nó atual eh filho direito do new_root
+    return new_root;
+}
+
+Node* rotate_left(Node* root) {
+    if (root == NULL || root->right == NULL)
+        return root;
+
+    Node* new_root = root->right; // mesma coisa 
+    root->right = new_root->left;
+    new_root->left = root;
+    return new_root;
+}
+/* 
+desbalanceamento de árvore em C ocorre quando uma árvore
+de busca binária perde seu equilíbrio estrutural
 */
-Node* tree_create_empty();
+Node* tree_insert_balanced(Node* root, Node* new_node, int (compare)(void*, void*)) {
+    if (root == NULL) // se a arv ta vazia, o nó vira raiz
+        return new_node;
 
-/*CREATE A NODE
-    Creates a node with an info and left and right sub-tree.
+    if (compare(new_node->info, root->info) < 0) // insere recursivameente 
+        root->left = tree_insert_balanced(root->left, new_node, compare);
+    else
+        root->right = tree_insert_balanced(root->right, new_node, compare);
 
-Params
-    info: pointer to a information.
-    lst: pointer to a node root of a left sub-tree.
-    rst: pointer to a node root of a right sub-tree.
+    int balance = tree_get_height(root->left) - tree_get_height(root->right);
 
-Return
-    pointer to a new node (Node*).
-*/
-Node* tree_create_node(void* info, Node* lst, Node* rst);
+    if (balance > 1 && compare(new_node->info, root->left->info) < 0)
+        return rotate_right(root); 
 
-/*INSERT A NODE
-    Inserts a node in a tree based on a comparison.
-    If it's true, the new_node will be placed in the left sub-tree, 
-    if it's false, the new_node will be in the right sub-tree.
+    if (balance > 1 && compare(new_node->info, root->left->info) > 0) {
+        root->left = rotate_left(root->left);
+        return rotate_right(root);
+    }
 
-Params
-    root: pointer to the root of the tree
-    new_node: pointer to the new node
-    compare: callback function that compares two elements
+    if (balance < -1 && compare(new_node->info, root->right->info) > 0)
+        return rotate_left(root);
 
-Return
-    True if the new_node was placed in the tree,
-    otherwise false.
-*/
-Node* tree_insert_node(Node* root, Node* new_node, int (compare)(void*, void*));
+    if (balance < -1 && compare(new_node->info, root->right->info) < 0) {
+        root->right = rotate_right(root->right);
+        return rotate_left(root);
+    }
 
-/*FREE A TREE
-    free memory of all elements in a tree/subtree starting from the "root" node.
+    return root;
+}
 
-Params
-    root: a node of a tree/subtree that you would like to free.
-*/
-void tree_free(Node* root);
+Node* tree_search(Node* root, int (condition)(void*)) {
+    if (root == NULL) return NULL;
 
-/*PERFORM OPERATION IN A TREE 
-    perform an operation in all elements of a tree. 
-Params
-    Node* root = receives the head of the tree 
-    void (operation)(void*) = callback operation that will be applied to the intere tree
-*/ 
-void tree_map(Node* root, void (operation)(void*));
+    if (condition(root->info)) // atende a condicao?
+        return root;
 
-/*COPY A NODE 
-    copy a node of a tree.
-Params
-    original_node: pointer to the original node.
+    Node* found = tree_search(root->left, condition);
+    if (found != NULL) return found; // found eh a variavel flag
 
-Returns
-    pointer to a copied node.
-*/
-Node* tree_copy_node(Node* original);
+    return tree_search(root->right, condition);
+}
 
+void write_inorder(Node *new_node, FILE *fp, char* (*create_line)(void*)) {
+    if (new_node == NULL) return;
 
-/*FILTER ELEMENTS IN THE TREE INTO A LIST
-    Gather together a set of elements that satisfy condition inside the tree, creating a list of nodes.
- 
- Params
-    root: pointer to the root of the tree
-    condition: callback function that returns true if the element satisfies the condition
-    copy_node: callback function that returns a copy of the element
- 
- Return
-    Pointer to the head of a list composed by the elements
-    that satisfy the condition.
-*/
-Listagen* tree_filter_as_list(Node* root, int (condition)(void*), void* (copy_info)(void*));
+    write_inorder(new_node->left, fp, create_line); // percorre a esquerda
 
-/*FILTER ELEMENTS IN THE TREE CREATING A NEW TREE
-    Gather together a set of elements that satisfy condition inside the tree.
- 
- Params
-    root: pointer to the root of the tree
-    condition: callback function that returns true if the element satisfies the condition
-    copy_node: callback function that returns a copy of the element
-    compare: callback function that compares two elements
- 
- Return
-    Pointer to the root of a tree composed by the elements
-    that satisfy the condition.
-*/
-Node* tree_filter(Node* root, int (condition)(void*), void* (copy_info)(void*), int (compare)(void*, void*));
+    char* line = create_line(new_node->info); // converte o info em string
+    if (line != NULL) {
+        fprintf(fp, "%s\n", line);
+        free(line); // libera a memoria temporaria
+    }
 
-/*VERIFIES THE HEIGHT OF THE NODE
-    Receives a node that calculates his height on the tree
+    write_inorder(new_node->right, fp, create_line);
+}
 
- Params
-    node: pointer to the root of the tree
+// salva a arvore no arquivo
+void tree_to_file(Node* root, char* file_name, char* (create_line)(void*)) {
+    FILE* fp = fopen(file_name, "w"); // abre o arquivo pra escrita
+    if (!fp) {
+        printf("Error!\n");
+        return;
+    }
 
- Return
-    An integer for the height 
-*/
-int tree_get_height(Node* node);
+    write_inorder(root, fp, create_line); // percorre a arvore e fecha o arquivo
+    fclose(fp);
+}
 
-/*ROTATES THE TREE TO THE RIGHT
-    Executes a rotation to the right, to fix the imbalance
-    when the left subtree is heavier
+// carrega a arvore do arquivo
+Node* tree_load_from_file(char* file_name, void* (read_line)(char*), int (compare)(void*, void*)) {
+    FILE* fp = fopen(file_name, "r"); // abre pra leitura
+    if (!fp) {
+        printf("Error!\n");
+        return NULL;
+    }
 
- Params
-    root: pointer to the root of the tree
+    Node* root = NULL;
+    char buffer[256];
+    while (fgets(buffer, sizeof(buffer), fp)) {
+        buffer[strcspn(buffer, "\n")] = '\0'; 
+        void* data = read_line(buffer);
+        Node* new_node = tree_create_node(data, NULL, NULL);
+        root = tree_insert_node(root, new_node, compare);
+    }
 
- Return
-    A pointer (Node*) to the new root
-*/
-Node* rotate_right(Node* root);
+    fclose(fp);
+    return root;
+}
 
-/*ROTATES THE TREE TO THE LEFT
-    Executes a rotation to the left, to fix the imbalance
-    when the right subtree is heavier
+// exclusão em arvore, um monstro terrivel
+Node* tree_delete_balanced(Node* root, Node* node_to_delete, int (compare)(void*, void*)) {
+    if (!root || !node_to_delete) return root; // retorna como tá
 
- Params
-    root: pointer to the root of the tree
+    int cmp = compare(node_to_delete->info, root->info); 
+    if (cmp < 0) {
+        root->lst = tree_delete_balanced(root->lst, node_to_delete, compare);
+    } else if (cmp > 0) {
+        root->rst = tree_delete_balanced(root->rst, node_to_delete, compare);
+    } else {     
+        if (!root->lst || !root->rst) {
+            Node* temp = root->lst ? root->lst : root->rst;
+            free(root->info);
+            free(root);
+            return temp;
+        }
 
- Return
-    A pointer (Node*) to the new root
-*/
-Node* rotate_left(Node* root);
+        Node* succ = root->rst; // succ = sucessor-in-order
+        while (succ->lst) succ = succ->lst;
 
-/*INSERTS A NEW NODE WHILE BALANCING THE TREE 
-    Inserts a new node like a BST, but balancing the tree
-    after each insertion to keep it balanced
+        void* temp_info = root->info;
+        root->info = succ->info;
+        succ->info = temp_info;
 
- Params
-    root: pointer to the root of the tree
-    new_node: pointer to the new node
-    compare: callback function that compares two elements
+        root->rst = tree_delete_balanced(root->rst, succ, compare);
+    }
 
- Return
-    A pointer (Node*) to the new root
-*/
-Node* tree_insert_balanced(Node* root, Node* new_node, int (compare)(void*, void*));
+    int balance = tree_get_height(root->lst) - tree_get_height(root->rst);
 
-/*TREE SEARCH
-   Search the first element that satisfies the condition inside the tree.
+    if (balance > 1) {
+        if (tree_get_height(root->lst->lst) >= tree_get_height(root->lst->rst))
+            return rotate_right(root);          
+        else {
+            root->lst = rotate_left(root->lst); 
+            return rotate_right(root);
+        }
+    }
 
-Parameters
-   Node* root - receives the root of the tree.
-   int (condition)(void) - a callback that receives the node info
-   and returns a non-zero value if the condition is satisfied.
+    if (balance < -1) {
+        if (tree_get_height(root->rst->rst) >= tree_get_height(root->rst->lst))
+            return rotate_left(root);           
+        else {
+            root->rst = rotate_right(root->rst);
+            return rotate_left(root);
+        }
+    }
 
-Return
-   A pointer (Node*) to the first node that satisfies the condition.
-*/
-Node* tree_search(Node* root, int (condition)(void*));
-
-/*WRITE IN ORDER
-    Recursively writes the contents of a binary tree to a file using
-     symmetric order.
- 
-Return
-  (void) – does not return any value.
- 
-Parameters
-  Node* new_node – current node to process.
-  FILE* fp – file pointer to the opened text file where data will be written.
-  char* (create_line)(void*) – function that receives the node's info and
-  returns a dynamically allocated string to be written into the file.
-*/
-void write_inorder(Node *new_node, FILE *fp, char* (*create_line)(void*));
-
-/*TREE TO FILE
-    Save all elements from the tree to a text file using in-order traversal.
-
-Parameters
-    Node* root - receives the root of the tree.
-    char* file_name - receives the name of the file to be created.
-    char* (create_line)(void) - function that receives a node’s info,
-    returns a formatted string to be saved in the file.
-    This function must return a dynamically allocated string,
-    which will be freed after being written.
-
-Return
-    (void) - does not return anything.
-*/
-void tree_to_file(Node* root, char* file_name, char* (create_line)(void*));
-
-/*LOAD A BINARY TREE FROM A TEXT FILE 
-    Reads a text file line by line, converts each line into data (using read_line),
-    creates a node for each data item, and inserts it into the tree in order using the compare function.
-
-Return
-    A pointer to the root of the constructed tree (Node*)
-
-Parameters
-    file_name: name of the file to read
-    read_line: function that converts a line (char*) into generic data (void*)
-    compare: function used to order nodes upon insertion
-*/
-Node* tree_load_from_file(char* file_name, void* (read_line)(char*), int (compare)(void*, void*));
+    return root;
+}

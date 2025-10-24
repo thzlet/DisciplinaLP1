@@ -18,7 +18,6 @@
     Node* tree_create_node(void* info, Node* lst, Node* rst);
     void tree_map(Node* root, void (operation)(void*));
     Node* tree_search(Node* root, int (condition)(void*));
-
     Node* tree_load_from_file(char* file_name, void* (read_line)(char*), int (compare)(void*, void*));
     void tree_to_file(Node* root, char* file_name, char* (create_line)(void*));
  
