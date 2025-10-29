@@ -3,15 +3,15 @@
 #include <stdio.h>
 #include <string.h>
 
-int tree_empty(Node* root) {
+int tree_empty(Node* root) { // // 1. verifica se a arvore ta vazia 
     return (root == NULL); // se estiver vazia, retorna 1
 }
 
-Node* tree_create_empty() {
+Node* tree_create_empty() { // 2. cria uma arvore vazia 
     return NULL; // arvore vazia = ponteiro nulo 
 }
 
-Node* tree_create_node(void* info, Node* lst, Node* rst) {
+Node* tree_create_node(void* info, Node* lst, Node* rst) { // 3. cria um novo nó
     Node* new_node = (Node*)malloc(sizeof(Node)); // aloca memória pro nó
     if (!new_node) { // verifica se foi alocado
         printf("Error!\n");
@@ -23,7 +23,7 @@ Node* tree_create_node(void* info, Node* lst, Node* rst) {
     return new_node;
 }
 
-Node* tree_insert_node(Node* root, Node* new_node, int (compare)(void*, void*)) {
+Node* tree_insert_node(Node* root, Node* new_node, int (compare)(void*, void*)) { // 4. insere o novo nó
     if (root == NULL) // se a arvore estiver vazia, o nó vira raiz
         return new_node;
 
@@ -34,7 +34,7 @@ Node* tree_insert_node(Node* root, Node* new_node, int (compare)(void*, void*)) 
 
     return root;
 }
-
+// 5. libera memória 
 void tree_free(Node* root) { // liberando recursivamente os nós
     if (root != NULL) {
         tree_free(root->left);
@@ -45,7 +45,7 @@ void tree_free(Node* root) { // liberando recursivamente os nós
 }
 /* 
 // o que??
-void tree_map(Node* root, void (operation)(void*)) {
+void tree_map(Node* root, void (operation)(void*)) { // 6...
     if (root != NULL) {
         tree_map(root->left, operation);
         operation(root->info);
@@ -53,7 +53,7 @@ void tree_map(Node* root, void (operation)(void*)) {
     }
 }
 */
-Node* tree_copy_node(Node* original) {
+Node* tree_copy_node(Node* original) { // 7. copia o nó
     if (original == NULL) return NULL; // nó original 
     Node* copy = (Node*)malloc(sizeof(Node)); // aloca memória pro novo node
     if (copy == NULL) return NULL; // verifica a alocação
@@ -63,7 +63,7 @@ Node* tree_copy_node(Node* original) {
     return copy;
 }
 
-Listagen* tree_filter_as_list(Node* root, int (condition)(void*), void* (copy_info)(void*)) {
+Listagen* tree_filter_as_list(Node* root, int (condition)(void*), void* (copy_info)(void*)) { //8. cria uma lista encadeada de elementos que satisfazem uma condição
     if (root == NULL) return NULL; // nada para filtrar
 
     Listagen* lista = NULL; // inicializa a lista generica

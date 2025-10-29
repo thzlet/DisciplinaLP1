@@ -1,19 +1,19 @@
 #include "TAD_LISTA_PRODUTOS.h"
-#include <stdlib.h>
+#include <stdlib.h> //malloc, free, exit..
 
-Lista* lst_cria(void){
-    return NULL;
+Lista* lst_cria(void){ // retorna o ponteiro pro tipo lista
+    return NULL; // não há nó
 }
 
-Lista* lst_novo_elemento(void){
-    Lista* novo_elemento = (Lista*)malloc(sizeof(Lista));
+Lista* lst_novo_elemento(void){ // criando nó e retornando um ponteiro pra ele
+    Lista* novo_elemento = (Lista*)malloc(sizeof(Lista));  // alocação dinamica
     
-    if(novo_elemento == NULL){
+    if(novo_elemento == NULL){ // verificando se foi alocado
         printf("Não temos memória suficiente...");
         exit(1);
     }
 
-    novo_elemento->prox = NULL;
+    novo_elemento->prox = NULL; // inicializa o ponteiro prox para NULL;
 
     printf("## Cadastro de Produto ##\n");
     printf("id: ");
@@ -27,36 +27,32 @@ Lista* lst_novo_elemento(void){
     printf("Preço: ");
     scanf(" %f%*c", &novo_elemento->preco);
 
-    return novo_elemento;
+    return novo_elemento; // nó recem alocado 
 
 }
 
 Lista* lst_insere(Lista* cabeca_da_lista, Lista* novo_elemento){
-    novo_elemento->prox = cabeca_da_lista;
-    return novo_elemento;
+    novo_elemento->prox = cabeca_da_lista; // o prox do novo nó aponta para a cabeça antiga
+    return novo_elemento; 
 }
 
 Lista* lst_retira_id(Lista* cabeca_da_lista, int id){
-    Lista* ant = NULL;
-    Lista* p = cabeca_da_lista;
+    Lista* ant = NULL; // nó anterior ao atual
+    Lista* p = cabeca_da_lista; // percorre a lista a partir da cabeça
 
-    // Busca pelo elemento com o id
-    while(p != NULL && p->id != id){
-        ant = p;
-        p = p->prox;
+    while(p != NULL && p->id != id){ 
+        ant = p; // guarda o anterior 
+        p = p->prox; // avança para o proximo nó
     }
-    
-    // Encontramos o elemento a ser retirado.
+
     if (p != NULL){
 
-        // O elemento a ser retirado está na cabeça da lista.
         if(ant == NULL){
-            cabeca_da_lista = p->prox;
+            cabeca_da_lista = p->prox; // remove a cabeça
             free(p);
         }
-        // O elemento a ser retirado está no corpo ou no final da lista.
         else{
-            ant->prox = p->prox;
+            ant->prox = p->prox; // liga o anterior ao próximo do atual
             free(p);
         }
     }
@@ -67,7 +63,6 @@ Lista* lst_retira_id(Lista* cabeca_da_lista, int id){
 Lista* lst_busca_id(Lista* cabeca_da_lista, int id){
     Lista* p = cabeca_da_lista;
 
-    // Busca pelo elemento com o id
     while(p != NULL && p->id != id)
         p = p->prox;
 
