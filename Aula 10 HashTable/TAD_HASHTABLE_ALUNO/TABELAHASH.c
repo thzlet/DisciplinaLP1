@@ -36,13 +36,13 @@ Aluno* hsh_insere(Aluno** tab, int mat, char* nome, char* tel, char* email){
     }
 
    
-    if(p){ // Caso encontremos o aluno com a matrícula que queremos inserir
+    if(p){ 
         strcpy(p->nome, nome);
         strcpy(p->tel, tel);
         strcpy(p->email, email);
         return p;
     }
-    else  // Caso não encontremos um aluno com matrícula igual.
+    else  
     {
         Aluno* novo = (Aluno*)malloc(sizeof(Aluno));
         
@@ -57,10 +57,10 @@ Aluno* hsh_insere(Aluno** tab, int mat, char* nome, char* tel, char* email){
         strcpy(novo->email, email);
         novo->prox = NULL;
 
-        if(ant){ // Caso em que a lista de colisões não esteja vazia.
+        if(ant){ 
             ant->prox = novo;
         }
-        else{ // Caso a lista de colisões esteja vazia.
+        else{ 
             tab[id_hash] = novo;
         }
         return novo;
@@ -72,7 +72,6 @@ int hsh_remove(Aluno** tab, int mat){
     Aluno* p = tab[hash(mat)];
     Aluno* ant = NULL;
 
-    // Busca por matrículas iguais na tabela hash.
     while(p!= NULL){
         if(p->mat == mat)
             break;
@@ -81,16 +80,12 @@ int hsh_remove(Aluno** tab, int mat){
         p = p->prox;
     }
 
-    // Não encontrou nada.
     if(!p)
         return 0;
 
-    // Encontrou matrícula igual na tabela.
     if(ant)
-        // Havia uma lista de elementos que colidiram.
         ant->prox = p->prox;
     else
-        // Havia apenas um elemento que será excluído.
         tab[hash(mat)] = NULL;
     
     free(p);
@@ -110,13 +105,13 @@ int hsh_atualiza(Aluno** tab, int mat, char* nome, char* tel, char* email){
         p = p->prox;
     }
 
-    if(p){ // Caso encontremos o aluno com a matrícula que queremos inserir
+    if(p){ 
         strcpy(p->nome, nome);
         strcpy(p->tel, tel);
         strcpy(p->email, email);
         return p;
     }
-    else  // Caso não encontremos um aluno com matrícula igual.
+    else  
     {
         return NULL;
     }
@@ -159,19 +154,94 @@ int hsh_conta_alunos(Aluno** tab){
 }
 
 // 8. Buscar aluno por nome (busca parcial)
-Aluno* hsh_busca_por_nome(Aluno** tab, char* nome);
+Aluno* hsh_busca_por_nome(Aluno** tab, char* nome){
+    Aluno* p = NULL;
+
+    for(int i = 0; i < N; i++){
+        p = tab[i];
+        while(p != NULL){
+            if(strstr(p->nome, nome) != NULL){  
+                return p; // encontrou
+            }
+            p = p->prox;
+        }
+    }
+
+    return NULL; 
+}
 
 // 9. Limpar/liberar toda a tabela
-void hsh_limpa_tabela(Aluno** tab);
+void hsh_limpa_tabela(Aluno** tab){
+    Aluno* p;
+    Aluno* aux;
+
+    for(int i = 0; i < N; i++){
+        p = tab[i];
+        while(p != NULL){
+            aux = p->prox;
+            free(p);
+            p = aux;
+        }
+        tab[i] = NULL;
+    }
+}
+
 
 // 10. Calcular fator de carga da tabela
-float hsh_fator_carga(Aluno** tab);
+float hsh_fator_carga(Aluno** tab){
+    int qtd = hsh_conta_alunos(tab);
+    return (float)qtd / N;
+}
 
 // 11. Verificar se tabela está vazia
-int hsh_vazia(Aluno** tab);
+int hsh_vazia(Aluno** tab){
+    for(int i = 0; i < N; i++){
+        if(tab[i] != NULL){
+            return 0; 
+        }
+    }
+    return 1;
+}
 
 // 12. Exportar dados para arquivo
-int hsh_exporta_arquivo(Aluno** tab, char* filename, char* (*escrever_linha_csv)(void*));
+int hsh_exporta_arquivo(Aluno** tab, char* filename, char* (*escrever_linha_csv)(void*)){
+    FILE* f = fopen(filename, "w");
+    if(!f) return 0;
+
+    Aluno* p;
+
+    for(int i = 0; i < N; i++){
+        p = tab[i];
+        while(p != NULL){
+            char* linha = escrever_linha_csv((void*)p);
+            fprintf(f, "%s\n", linha);
+            free(linha);   
+            p = p->prox;
+        }
+    }
+
+    fclose(f);
+    return 1;
+}
 
 // 13. Importar dados de arquivo
-int hsh_importa_arquivo(Aluno** tab, char* filename, void* (*ler_linha_csv)(char*));
+int hsh_importa_arquivo(Aluno** tab, char* filename, void* (*ler_linha_csv)(char*)){
+    FILE* f = fopen(filename, "r");
+    if(!f) return 0;
+
+    char buffer[256];
+
+    while(fgets(buffer, 256, f)){
+        // remove \n
+        buffer[strcspn(buffer, "\n")] = '\0';
+
+        Aluno* temp = (Aluno*)ler_linha_csv(buffer);
+        if(temp){
+            hsh_insere(tab, temp->mat, temp->nome, temp->tel, temp->email);
+            free(temp); 
+        }
+    }
+
+    fclose(f);
+    return 1;
+}
